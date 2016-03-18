@@ -1,0 +1,11 @@
+dbUrl: 'jdbc:mysql://localhost/ducklog'
+dbUser: 'root'
+dbPassword: ''
+
+autopromote:
+        Member:
+                hasGroup: [Visitor]
+                missingGroup: [Member]
+                removeGroup: [Visitor]
+                addGroup: [Member]
+                after: 3600
