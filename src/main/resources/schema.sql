@@ -14,7 +14,7 @@ CREATE TABLE login_time (
         uuid VARCHAR(36),
         server VARCHAR(100) NOT NULL,
         time BIGINT NOT NULL,
-        PRIMARY KEY(uuid)
+        PRIMARY KEY(uuid, server)
 );
 
 -- login_session, list of current player sessions
