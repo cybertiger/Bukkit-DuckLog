@@ -32,7 +32,8 @@ import org.cyberiantiger.minecraft.log.config.Config;
  * @author antony
  */
 public class Database {
-    private static final int DB_VERSION = 1;
+    private static final String MIGRATE_FILE = "migrate-%d.sql";
+    private static final int DB_VERSION = 2;
     private static final String GET_VERSION_SQL = "SELECT id FROM version";
     private static final String UPDATE_PLAYERNAME_SQL = "INSERT INTO playernames (uuid, name, last_seen) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name = ?, last_seen = ?";
     private static final String LOGIN_SQL = "INSERT INTO login_events (uuid, server, time, ip, type) VALUES (?, ?, ?, ?, 'LOGIN')";
@@ -71,6 +72,30 @@ public class Database {
         this.main = main;
     }
 
+    private void runScript(Connection conn, String script) throws SQLException {
+        try (
+                Statement batch = conn.createStatement();
+                Reader in = main.openResource(script);
+                ) {
+            BufferedReader inn = new BufferedReader(in);
+            StringBuilder query = new StringBuilder();
+            String line;
+            while ( (line = inn.readLine()) != null ) {
+                if (line.endsWith(";")) {
+                    query.append(line.substring(0, line.length() - 1));
+                    batch.addBatch(query.toString());
+                    query.setLength(0);
+                } else {
+                    query.append(line);
+                    query.append(System.lineSeparator());
+                }
+            }
+            batch.executeBatch();
+        } catch (IOException ex2) {
+            throw new SQLException("Fatal error initialising database", ex2);
+        }
+    }
+
     private synchronized Connection getConnection() throws SQLException {
         if (conn != null) {
             if (conn.isValid(1000)) {
@@ -83,39 +108,29 @@ public class Database {
         Config config = main.getRealConfig();
         conn = DriverManager.getConnection(config.getDbUrl(), config.getDbUser(), config.getDbPassword());
         conn.setAutoCommit(true); // Who needs transactions anyway.
-        try (
-                Statement testVersion = conn.createStatement();
-                ResultSet rs = testVersion.executeQuery(GET_VERSION_SQL)
-                ) {
-            if (rs.next()) {
-                int version = rs.getInt(1);
-                if (version != DB_VERSION) throw new SQLException("Database version does not match expected version");
-            } else {
-                throw new SQLException("Database version field not set");
-            }
-        } catch (SQLException ex) {
-            main.getLogger().log(Level.INFO, "Error initialising database: {0}", ex.getMessage());
+        while (true) {
             try (
-                    Statement batch = conn.createStatement();
-                    Reader in = main.openResource("schema.sql");
+                    Statement testVersion = conn.createStatement();
+                    ResultSet rs = testVersion.executeQuery(GET_VERSION_SQL)
                     ) {
-                BufferedReader inn = new BufferedReader(in);
-                StringBuilder query = new StringBuilder();
-                String line;
-                while ( (line = inn.readLine()) != null ) {
-                    if (line.endsWith(";")) {
-                        query.append(line.substring(0, line.length() - 1));
-                        batch.addBatch(query.toString());
-                        query.setLength(0);
+                if (rs.next()) {
+                    int version = rs.getInt(1);
+                    if (version > DB_VERSION || version < 1) {
+                        throw new SQLException(String.format("Got database version %d, expected %d", version, DB_VERSION));
+                    } else if (version < DB_VERSION) {
+                        runScript(conn, String.format(MIGRATE_FILE, version));
+                        continue; // May not be last migrate script.
                     } else {
-                        query.append(line);
-                        query.append(System.lineSeparator());
+                        break; // Success version == DB_VERSION
                     }
+                } else {
+                    throw new SQLException("Database version row not found");
                 }
-                batch.executeBatch();
-            } catch (IOException ex2) {
-                throw new SQLException("Fatal error initialising database", ex2);
+            } catch (SQLException ex) {
+                main.getLogger().log(Level.INFO, "Error initialising database: {0}", ex.getMessage());
             }
+            runScript(conn, "schema.sql");
+            break; // Success, hopefully
         }
         return conn;
     }
