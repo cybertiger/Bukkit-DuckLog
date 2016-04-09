@@ -42,6 +42,7 @@ public class Database {
     private static final String QUERY_LOGIN_TIME_SQL = "SELECT server, time FROM login_time WHERE uuid = ? ORDER BY server";
     private static final String QUERY_CURRENT_SESSION = "SELECT server, start FROM login_sessions WHERE uuid = ? ORDER BY server";
     private static final String UPDATE_SESSION_SQL = "INSERT INTO login_sessions (server, uuid, start) values (?, ?, ?) ON DUPLICATE KEY UPDATE start = ?";
+    private static final String UPDATE_LAST_SEEN_SQL = "INSERT INTO last_seen (uuid, server, time, world, x, y, z) values (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE time = ?, world = ?, x = ?, y = ?, z = ?";
 
     public static class PlayerLoginResult {
         private final Map<String, Long> loginTime;
@@ -157,13 +158,14 @@ public class Database {
         }
     }
 
-    synchronized PlayerLoginResult playerLoginSync(String serverName, String name, UUID uuid, String ip, long time) throws SQLException {
+    synchronized PlayerLoginResult playerLoginSync(String serverName, String name, UUID uuid, String ip, long time, String world, int x, int y, int z) throws SQLException {
         Connection conn = getConnection();
         conn.setAutoCommit(false);
         try (
                 PreparedStatement login = conn.prepareStatement(LOGIN_SQL);
                 PreparedStatement updateNames = conn.prepareStatement(UPDATE_PLAYERNAME_SQL);
                 PreparedStatement updateSession = conn.prepareStatement(UPDATE_SESSION_SQL);
+                PreparedStatement lastSeen = conn.prepareStatement(UPDATE_LAST_SEEN_SQL);
                 )
         {
             conn.setAutoCommit(false);
@@ -180,9 +182,22 @@ public class Database {
             updateSession.setString(2, uuid.toString());
             updateSession.setLong(3, time);
             updateSession.setLong(4, time);
+            lastSeen.setString(1, uuid.toString());
+            lastSeen.setString(2, serverName);
+            lastSeen.setLong(3, time);
+            lastSeen.setString(4, world);
+            lastSeen.setInt(5, x);
+            lastSeen.setInt(6, y);
+            lastSeen.setInt(7, z);
+            lastSeen.setLong(8, time);
+            lastSeen.setString(9, world);
+            lastSeen.setInt(10, x);
+            lastSeen.setInt(11, y);
+            lastSeen.setInt(12, z);
             login.executeUpdate();
             updateNames.executeUpdate();
             updateSession.executeUpdate();
+            lastSeen.executeUpdate();
             conn.commit();
         } finally {
             conn.setAutoCommit(true);
@@ -190,7 +205,7 @@ public class Database {
         return new PlayerLoginResult(getLoginTime(uuid, time));
     }
 
-    synchronized PlayerLogoutResult playerLogoutSync(String serverName, String name, UUID uuid, String ip, long time) throws SQLException {
+    synchronized PlayerLogoutResult playerLogoutSync(String serverName, String name, UUID uuid, String ip, long time, String world, int x, int y, int z) throws SQLException {
         Connection conn = getConnection();
         conn.setAutoCommit(false);
         try (
@@ -222,6 +237,7 @@ public class Database {
         try (
                 PreparedStatement logout = conn.prepareStatement(LOGOUT_SQL);
                 PreparedStatement updateNames = conn.prepareStatement(UPDATE_PLAYERNAME_SQL);
+                PreparedStatement lastSeen = conn.prepareStatement(UPDATE_LAST_SEEN_SQL);
                 )
         {
             logout.setString(1, uuid.toString());
@@ -233,8 +249,21 @@ public class Database {
             updateNames.setLong(3, time);
             updateNames.setString(4, name);
             updateNames.setLong(5, time);
+            lastSeen.setString(1, uuid.toString());
+            lastSeen.setString(2, serverName);
+            lastSeen.setLong(3, time);
+            lastSeen.setString(4, world);
+            lastSeen.setInt(5, x);
+            lastSeen.setInt(6, y);
+            lastSeen.setInt(7, z);
+            lastSeen.setLong(8, time);
+            lastSeen.setString(9, world);
+            lastSeen.setInt(10, x);
+            lastSeen.setInt(11, y);
+            lastSeen.setInt(12, z);
             logout.executeUpdate();
             updateNames.executeUpdate();
+            lastSeen.executeUpdate();
             conn.commit();
         } finally {
             conn.setAutoCommit(true);
@@ -430,29 +459,29 @@ public class Database {
         return result;
     }
 
-    public void playerLogin(String serverName, String name, UUID uuid, String ip, long time, Consumer<PlayerLoginResult> result, Consumer<Exception> ex) {
+    public void playerLogin(String serverName, String name, UUID uuid, String ip, long time, String world, int x, int y, int z, Consumer<PlayerLoginResult> result, Consumer<Exception> ex) {
         if (Bukkit.isPrimaryThread()) {
             main.getServer().getScheduler().runTaskAsynchronously(main, () -> {
-                playerLogin(serverName, name, uuid, ip, time, new CallSyncConsumer<>(main, result), new CallSyncConsumer<>(main, ex));
+                playerLogin(serverName, name, uuid, ip, time, world, x, y, z, new CallSyncConsumer<>(main, result), new CallSyncConsumer<>(main, ex));
             });
             return;
         }
         try {
-            result.accept(playerLoginSync(serverName, name, uuid, ip, time));
+            result.accept(playerLoginSync(serverName, name, uuid, ip, time, world, x, y, z));
         } catch (SQLException e) {
             ex.accept(e);
         }
     }
 
-    public void playerLogout(String serverName, String name, UUID uuid, String ip, long time, Consumer<PlayerLogoutResult> result, Consumer<Exception> ex) {
+    public void playerLogout(String serverName, String name, UUID uuid, String ip, long time, String world, int x, int y, int z, Consumer<PlayerLogoutResult> result, Consumer<Exception> ex) {
         if (Bukkit.isPrimaryThread()) {
             main.getServer().getScheduler().runTaskAsynchronously(main, () -> {
-                playerLogout(serverName, name, uuid, ip, time, new CallSyncConsumer<>(main, result), new CallSyncConsumer<>(main, ex));
+                playerLogout(serverName, name, uuid, ip, time, world, x, y, z, new CallSyncConsumer<>(main, result), new CallSyncConsumer<>(main, ex));
             });
             return;
         }
         try {
-            result.accept(playerLogoutSync(serverName, name, uuid, ip, time));
+            result.accept(playerLogoutSync(serverName, name, uuid, ip, time, world, x, y, z));
         } catch (SQLException e) {
             ex.accept(e);
         }

@@ -17,6 +17,20 @@ CREATE TABLE login_time (
         PRIMARY KEY(uuid, server)
 );
 
+-- last seen table
+DROP TABLE IF EXISTS last_seen;
+CREATE TABLE last_seen (
+        uuid VARCHAR(36) NOT NULL,
+        server VARCHAR(100) NOT NULL,
+        time BIGINT NOT NULL,
+        ip VARCHAR(255) NOT NULL,
+        world VARCHAR(80),
+        x int,
+        y int,
+        z int,
+        PRIMARY KEY (uuid, server)
+);
+
 -- login_session, list of current player sessions
 -- so we can account for current time logged in
 DROP TABLE IF EXISTS login_sessions;

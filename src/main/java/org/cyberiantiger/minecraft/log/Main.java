@@ -25,6 +25,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.logging.Level;
 import net.milkbowl.vault.permission.Permission;
+import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -34,7 +35,6 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.cyberiantiger.minecraft.log.cmd.AbstractCommand;
 import org.cyberiantiger.minecraft.log.cmd.AuditCommand;
@@ -180,8 +180,9 @@ public class Main extends JavaPlugin implements Listener {
             getLogger().log(Level.WARNING, "Error deleting sessions", ex);
         }
         getServer().getOnlinePlayers().stream().forEach((p) -> {
+            Location l = p.getLocation();
             try {
-                getDB().playerLoginSync(server, p.getName(), p.getUniqueId(), p.getAddress().getHostString(), now);
+                getDB().playerLoginSync(server, p.getName(), p.getUniqueId(), p.getAddress().getHostString(), now, l.getWorld().getName(), l.getBlockX(), l.getBlockY(), l.getBlockZ());
             } catch (SQLException ex) {
                 getLogger().log(Level.WARNING, "Error performing login", ex);
             }
@@ -193,8 +194,9 @@ public class Main extends JavaPlugin implements Listener {
         long now = System.currentTimeMillis();
         String server = getServer().getServerName();
         getServer().getOnlinePlayers().stream().forEach((p) -> {
+            Location l = p.getLocation();
             try {
-                getDB().playerLogoutSync(server, p.getName(), p.getUniqueId(), p.getAddress().getHostString(), now);
+                getDB().playerLogoutSync(server, p.getName(), p.getUniqueId(), p.getAddress().getHostString(), now, l.getWorld().getName(), l.getBlockX(), l.getBlockY(), l.getBlockZ());
             } catch (SQLException ex) {
                 getLogger().log(Level.WARNING, "Error performing login", ex);
             }
@@ -256,7 +258,8 @@ public class Main extends JavaPlugin implements Listener {
     public void onPlayerJoin(PlayerJoinEvent e) {
         long now = System.currentTimeMillis();
         Player player = e.getPlayer();
-        getDB().playerLogin(getServer().getServerName(), player.getName(), player.getUniqueId(), player.getAddress().getHostString(), now,
+        Location l = player.getLocation();
+        getDB().playerLogin(getServer().getServerName(), player.getName(), player.getUniqueId(), player.getAddress().getHostString(), now, l.getWorld().getName(), l.getBlockX(), l.getBlockY(), l.getBlockZ(),
                 (result) -> {
                     performAutorank(player, result.getLoginTime());
                 }, (ex) -> {
@@ -268,11 +271,8 @@ public class Main extends JavaPlugin implements Listener {
     public void onPlayerQuit(PlayerQuitEvent e) {
         long now = System.currentTimeMillis();
         Player player = e.getPlayer();
-        // TODO:
-        // Create sessions for all players onEnable() plus login events
-        // Create a logout event for all sessions onDisable()
-        // This hack fixes the NPE which occurs due to /reload
-        getDB().playerLogout(getServer().getServerName(), player.getName(), player.getUniqueId(), player.getAddress().getHostString(), now,
+        Location l = player.getLocation();
+        getDB().playerLogout(getServer().getServerName(), player.getName(), player.getUniqueId(), player.getAddress().getHostString(), now, l.getWorld().getName(), l.getBlockX(), l.getBlockY(), l.getBlockZ(),
                 (result) -> {
                     performAutorank(e.getPlayer(),result.getLoginTime());
                 }, (ex) -> {
