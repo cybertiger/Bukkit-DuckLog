@@ -1,7 +1,5 @@
 package org.cyberiantiger.minecraft.log;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.ByteStreams;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -24,7 +22,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.logging.Level;
-import net.milkbowl.vault.permission.Permission;
+
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -41,6 +39,7 @@ import org.cyberiantiger.minecraft.log.cmd.AuditCommand;
 import org.cyberiantiger.minecraft.log.cmd.CheckCommand;
 import org.cyberiantiger.minecraft.log.cmd.CommandException;
 import org.cyberiantiger.minecraft.log.cmd.DuckLogCommand;
+import org.cyberiantiger.minecraft.log.cmd.FriendCommand;
 import org.cyberiantiger.minecraft.log.cmd.InvalidSenderException;
 import org.cyberiantiger.minecraft.log.cmd.PermissionException;
 import org.cyberiantiger.minecraft.log.cmd.SeenCommand;
@@ -52,6 +51,11 @@ import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.CustomClassLoaderConstructor;
 import org.yaml.snakeyaml.error.YAMLException;
 import org.yaml.snakeyaml.introspector.BeanAccess;
+
+import com.google.common.base.Charsets;
+import com.google.common.io.ByteStreams;
+
+import net.milkbowl.vault.permission.Permission;
 
 public class Main extends JavaPlugin implements Listener {
     private static final String CONFIG = "config.yml";
@@ -228,6 +232,7 @@ public class Main extends JavaPlugin implements Listener {
         commands.put("check", new CheckCommand(this));
         commands.put("ducklog", new DuckLogCommand(this));
         commands.put("timetop", new TimeTopCommand(this));
+        commands.put("friend", new FriendCommand(this));
     }
 
     @Override
