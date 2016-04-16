@@ -15,7 +15,6 @@ import org.bukkit.command.CommandSender;
 import org.cyberiantiger.minecraft.log.LoginEvent;
 import org.cyberiantiger.minecraft.log.Main;
 import org.joda.time.Period;
-import org.joda.time.format.PeriodFormat;
 
 /**
  *
@@ -23,7 +22,6 @@ import org.joda.time.format.PeriodFormat;
  */
 public class FriendCommand extends AbstractCommand {
     private static final Pattern VALID_USERNAME = Pattern.compile("[a-zA-Z0-9_]{2,16}");
-
 
     public FriendCommand(Main main) {
         super(main);
@@ -45,11 +43,10 @@ public class FriendCommand extends AbstractCommand {
                 processResult(sender, result);
             }, (ex) -> {
                 sender.sendMessage(main.getMessage("error"));
-                main.getLogger().log(Level.WARNING, "Error occurred processing friend <name>", ex);
+                main.getLogger().log(Level.WARNING, "Error occurred processing /friend <name>", ex);
             });
         } 
     }
-
 
     private void processResult(CommandSender sender, Map<UUID, Map<String, LoginEvent>> result) {
         if (result.isEmpty()) {
@@ -68,7 +65,7 @@ public class FriendCommand extends AbstractCommand {
                                 main.getMessage("friend.player",
                                         ee.getKey(), // Name
                                         ee.getValue().getServer(), // Server
-                                        PeriodFormat.getDefault().print(period) // Time
+                                        myFormatter().print(period) // Time
                                 ));
                     } else {
                         if (f2) {

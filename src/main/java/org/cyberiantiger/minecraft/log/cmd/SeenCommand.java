@@ -10,13 +10,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.regex.Pattern;
-import org.bukkit.OfflinePlayer;
+
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 import org.cyberiantiger.minecraft.log.LoginEvent;
 import org.cyberiantiger.minecraft.log.Main;
 import org.joda.time.Period;
-import org.joda.time.format.PeriodFormat;
 
 /**
  *
@@ -98,7 +96,7 @@ public class SeenCommand extends AbstractCommand {
                         }
                         sender.sendMessage(
                                 main.getMessage("seen.time",
-                                        PeriodFormat.getDefault().print(period) // Time
+                                		myFormatter().print(period) // Time
                                 ));
                     } else {
                         if (f2) {

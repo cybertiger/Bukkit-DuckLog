@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
+
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.cyberiantiger.minecraft.log.Main;
@@ -65,7 +66,7 @@ public class CheckCommand extends AbstractCommand {
             sender.sendMessage(main.getMessage("check.header"));
             long total = 0L;
             for (Map.Entry<String,Long> ee : e.getValue().entrySet()) {
-                sender.sendMessage(main.getMessage("check.row", ee.getKey(), PeriodFormat.getDefault().print(trimPeriod((long)ee.getValue()))));
+                sender.sendMessage(main.getMessage("check.row", ee.getKey(), PeriodFormat.getDefault().print(trimPeriod(ee.getValue()))));
                 total += ee.getValue();
             }
             sender.sendMessage(main.getMessage("check.summary", PeriodFormat.getDefault().print(trimPeriod(total))));

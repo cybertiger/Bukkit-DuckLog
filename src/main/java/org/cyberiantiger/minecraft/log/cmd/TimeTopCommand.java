@@ -8,9 +8,9 @@ package org.cyberiantiger.minecraft.log.cmd;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
+
 import org.bukkit.command.CommandSender;
 import org.cyberiantiger.minecraft.log.Main;
-import org.joda.time.format.PeriodFormat;
 
 /**
  *
@@ -56,14 +56,14 @@ public class TimeTopCommand extends AbstractCommand {
         sender.sendMessage(main.getMessage("topten.all"));
         int position = 1;
         for (Map.Entry<String,Long> e : top.entrySet()) {
-            sender.sendMessage(main.getMessage("topten.row", position++, e.getKey(), PeriodFormat.getDefault().print(trimPeriod(e.getValue()))));
+            sender.sendMessage(main.getMessage("topten.row", position++, e.getKey(), myFormatter().print(trimPeriod(e.getValue()))));
         }
     }
     private void formatTopTen(CommandSender sender, String server, Map<String, Long> top) {
         sender.sendMessage(main.getMessage("topten.server", server));
         int position = 1;
         for (Map.Entry<String,Long> e : top.entrySet()) {
-            sender.sendMessage(main.getMessage("topten.row", position++, e.getKey(), PeriodFormat.getDefault().print(trimPeriod(e.getValue()))));
+            sender.sendMessage(main.getMessage("topten.row", position++, e.getKey(), myFormatter().print(trimPeriod(e.getValue()))));
         }
     }
 }
