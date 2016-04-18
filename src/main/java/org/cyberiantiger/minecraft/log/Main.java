@@ -60,6 +60,7 @@ import net.milkbowl.vault.permission.Permission;
 public class Main extends JavaPlugin implements Listener {
     private static final String CONFIG = "config.yml";
     private static final String MESSAGES = "locale.properties";
+    public static final String FORMATS = "format_strings.properties";
     
     private final Properties messages = new Properties();
     private final Database database;
@@ -153,7 +154,7 @@ public class Main extends JavaPlugin implements Listener {
                 messages.clear();
                 messages.load(openResource(MESSAGES));
             } catch (IOException ex1) {
-                getLogger().log(Level.SEVERE, "Could not load default locale.properties", ex);
+                getLogger().log(Level.SEVERE, "Could not load default locale.properties", ex1);
             }
         }
     }
@@ -170,6 +171,7 @@ public class Main extends JavaPlugin implements Listener {
     public void onEnable() {
         copyDefault(CONFIG, CONFIG);
         copyDefault(MESSAGES, MESSAGES);
+        copyDefault(FORMATS, FORMATS);
         permissionService = getServer().getServicesManager().getRegistration(Permission.class).getProvider();
         getLogger().log(Level.INFO, "Loaded permission interface: {0}", permissionService.getClass().getName());
         loadConfig();

@@ -5,13 +5,16 @@
  */
 package org.cyberiantiger.minecraft.log.cmd;
 
+import java.io.IOException;
 import java.util.List;
-import java.util.Locale;
-import java.util.ResourceBundle;
+import java.util.Properties;
+import java.util.logging.Level;
 
 import org.bukkit.command.CommandSender;
 import org.cyberiantiger.minecraft.log.Main;
 import org.joda.time.Period;
+import org.joda.time.PeriodType;
+import org.joda.time.chrono.FixedMonthChronology;
 import org.joda.time.format.PeriodFormatter;
 import org.joda.time.format.PeriodFormatterBuilder;
 
@@ -22,7 +25,8 @@ import org.joda.time.format.PeriodFormatterBuilder;
 public abstract class AbstractCommand {
 
     protected final Main main;
-    protected static PeriodFormatter formatter;
+    private static PeriodFormatter formatter;
+    protected static PeriodType type = PeriodType.yearMonthDayTime().withMillisRemoved();
 
     public AbstractCommand(Main main) {
         this.main = main;
@@ -39,33 +43,41 @@ public abstract class AbstractCommand {
 
     public static Period trimPeriod(long period) {
         period -= period % SECOND; // Trim milliseconds.
-        return new Period(period);
+		return new Period( period, type, FixedMonthChronology.getInstance());
     }
     
     protected PeriodFormatter myFormatter() {
     	
     	if ( formatter == null ) {
-            ResourceBundle b = ResourceBundle.getBundle("format_strings", Locale.getDefault());
-            formatter =  new PeriodFormatterBuilder()
+    		Properties p = new Properties();
+    		try {
+				p.load(main.openDataFile(Main.FORMATS));
+			} catch ( IOException e ) {
+				main.getLogger().log(Level.WARNING, "Could not load " + Main.FORMATS, e);
+			}
+//            ResourceBundle b = ResourceBundle.getBundle("format_strings", Locale.getDefault());
+    		if (!p.isEmpty()) {
+    			formatter =  new PeriodFormatterBuilder()
 					        .appendYears()
-					        .appendSuffix(b.getString("PeriodFormat.year"), b.getString("PeriodFormat.years"))
+					        .appendSuffix(p.getProperty("PeriodFormat.year"), p.getProperty("PeriodFormat.years"))
 					        .appendSeparator(", ")
 					        .appendMonths()
-					        .appendSuffix(b.getString("PeriodFormat.month"), b.getString("PeriodFormat.months"))
-					        .appendSeparator(", ")
-					        .appendWeeks()
-					        .appendSuffix(b.getString("PeriodFormat.week"), b.getString("PeriodFormat.weeks"))
+					        .appendSuffix(p.getProperty("PeriodFormat.month"), p.getProperty("PeriodFormat.months"))
 					        .appendSeparator(", ")
 					        .appendDays()
-					        .appendSuffix(b.getString("PeriodFormat.day"))
+					        .appendSuffix(p.getProperty("PeriodFormat.day"), p.getProperty("PeriodFormat.days"))
 					        .appendSeparator(" & ")
 					        .appendHours()
-					        .appendSuffix(b.getString("PeriodFormat.hour"))
+					        .appendSuffix(p.getProperty("PeriodFormat.hour"))
 					        .appendSeparator(" ")
 					        .appendMinutes()
-					        .appendSuffix(b.getString("PeriodFormat.minute"))
-					        .toFormatter()
-					        .withLocale(Locale.getDefault());
+					        .appendSuffix(p.getProperty("PeriodFormat.minute"))
+					        .appendSeparator(" ")
+					        .appendSeconds()
+					        .appendSuffix(p.getProperty("PeriodFormat.second"))
+					        .toFormatter();
+			//		        .withLocale(Locale.getDefault());
+    		}
     	}
     	return formatter;
 	}
