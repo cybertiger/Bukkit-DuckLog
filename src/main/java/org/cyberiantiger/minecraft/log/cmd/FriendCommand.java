@@ -14,7 +14,6 @@ import java.util.regex.Pattern;
 import org.bukkit.command.CommandSender;
 import org.cyberiantiger.minecraft.log.LoginEvent;
 import org.cyberiantiger.minecraft.log.Main;
-import org.joda.time.Period;
 
 /**
  *
@@ -38,7 +37,6 @@ public class FriendCommand extends AbstractCommand {
         String target = args[0];
 
         if (VALID_USERNAME.matcher(target).matches()) {
-            // Name based query.
             main.getDB().seenName(target, (result) -> {
                 processResult(sender, result);
             }, (ex) -> {
@@ -60,12 +58,11 @@ public class FriendCommand extends AbstractCommand {
                 for (Map.Entry<String, LoginEvent> ee : e.getValue().entrySet()) {
                     if (f1) {
                         f1 = false;
-                        Period period = trimPeriod(now - ee.getValue().getTime());
                         sender.sendMessage(
                                 main.getMessage("friend.player",
                                         ee.getKey(), // Name
                                         ee.getValue().getServer(), // Server
-                                        myFormatter().print(period) // Time
+                                        getFormattedTime(now - ee.getValue().getTime()) // Time
                                 ));
                     } else {
                         if (f2) {

@@ -14,7 +14,6 @@ import java.util.regex.Pattern;
 import org.bukkit.command.CommandSender;
 import org.cyberiantiger.minecraft.log.LoginEvent;
 import org.cyberiantiger.minecraft.log.Main;
-import org.joda.time.Period;
 
 /**
  *
@@ -74,7 +73,6 @@ public class SeenCommand extends AbstractCommand {
                 for (Map.Entry<String, LoginEvent> ee : e.getValue().entrySet()) {
                     if (f1) {
                         f1 = false;
-                        Period period = trimPeriod(now - ee.getValue().getTime());
                         sender.sendMessage(
                                 main.getMessage("seen.player",
                                         ee.getKey(), // Name
@@ -95,9 +93,7 @@ public class SeenCommand extends AbstractCommand {
                                     ));
                         }
                         sender.sendMessage(
-                                main.getMessage("seen.time",
-                                		myFormatter().print(period) // Time
-                                ));
+                                main.getMessage("seen.time", getFormattedTime(now - ee.getValue().getTime())));
                     } else {
                         if (f2) {
                             aliases.append(ee.getKey());

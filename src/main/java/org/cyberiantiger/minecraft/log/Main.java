@@ -60,7 +60,7 @@ import net.milkbowl.vault.permission.Permission;
 public class Main extends JavaPlugin implements Listener {
     private static final String CONFIG = "config.yml";
     private static final String MESSAGES = "locale.properties";
-    public static final String FORMATS = "format_strings.properties";
+//    public static final String FORMATS = "format_strings.properties";
     
     private final Properties messages = new Properties();
     private final Database database;
@@ -171,7 +171,7 @@ public class Main extends JavaPlugin implements Listener {
     public void onEnable() {
         copyDefault(CONFIG, CONFIG);
         copyDefault(MESSAGES, MESSAGES);
-        copyDefault(FORMATS, FORMATS);
+//        copyDefault(FORMATS, FORMATS);
         permissionService = getServer().getServicesManager().getRegistration(Permission.class).getProvider();
         getLogger().log(Level.INFO, "Loaded permission interface: {0}", permissionService.getClass().getName());
         loadConfig();

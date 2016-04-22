@@ -56,14 +56,14 @@ public class TimeTopCommand extends AbstractCommand {
         sender.sendMessage(main.getMessage("topten.all"));
         int position = 1;
         for (Map.Entry<String,Long> e : top.entrySet()) {
-            sender.sendMessage(main.getMessage("topten.row", position++, e.getKey(), myFormatter().print(trimPeriod(e.getValue()))));
+            sender.sendMessage(main.getMessage("topten.row", position++, e.getKey(), getFormattedTime( e.getValue() )));
         }
     }
     private void formatTopTen(CommandSender sender, String server, Map<String, Long> top) {
         sender.sendMessage(main.getMessage("topten.server", server));
         int position = 1;
         for (Map.Entry<String,Long> e : top.entrySet()) {
-            sender.sendMessage(main.getMessage("topten.row", position++, e.getKey(), myFormatter().print(trimPeriod(e.getValue()))));
+            sender.sendMessage(main.getMessage("topten.row", position++, e.getKey(), getFormattedTime( e.getValue() )));
         }
     }
 }
