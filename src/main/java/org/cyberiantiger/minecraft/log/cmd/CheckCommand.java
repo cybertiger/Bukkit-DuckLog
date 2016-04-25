@@ -65,8 +65,8 @@ public class CheckCommand extends AbstractCommand {
             sender.sendMessage(main.getMessage("check.header"));
             long total = 0L;
             for (Map.Entry<String,Long> ee : e.getValue().entrySet()) {
-                sender.sendMessage(main.getMessage("check.row", ee.getKey(), getFormattedTime(now - ee.getValue() )));
-                total += now - ee.getValue();
+                sender.sendMessage(main.getMessage("check.row", ee.getKey(), getFormattedTime(ee.getValue())));
+                total += ee.getValue();
             }
             sender.sendMessage(main.getMessage("check.summary", getFormattedTime(total)));
             Map<String, Main.AutorankResult> performAutorank = main.performAutorank(e.getKey(), e.getValue());

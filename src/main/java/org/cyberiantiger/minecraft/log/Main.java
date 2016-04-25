@@ -60,7 +60,6 @@ import net.milkbowl.vault.permission.Permission;
 public class Main extends JavaPlugin implements Listener {
     private static final String CONFIG = "config.yml";
     private static final String MESSAGES = "locale.properties";
-//    public static final String FORMATS = "format_strings.properties";
     
     private final Properties messages = new Properties();
     private final Database database;
@@ -171,7 +170,6 @@ public class Main extends JavaPlugin implements Listener {
     public void onEnable() {
         copyDefault(CONFIG, CONFIG);
         copyDefault(MESSAGES, MESSAGES);
-//        copyDefault(FORMATS, FORMATS);
         permissionService = getServer().getServicesManager().getRegistration(Permission.class).getProvider();
         getLogger().log(Level.INFO, "Loaded permission interface: {0}", permissionService.getClass().getName());
         loadConfig();
@@ -266,10 +264,20 @@ public class Main extends JavaPlugin implements Listener {
         long now = System.currentTimeMillis();
         Player player = e.getPlayer();
         Location l = player.getLocation();
-        getDB().playerLogin(getServer().getServerName(), player.getName(), player.getUniqueId(), player.getAddress().getHostString(), now, l.getWorld().getName(), l.getBlockX(), l.getBlockY(), l.getBlockZ(),
+        getDB().playerLogin(
+        		getServer().getServerName(),
+        		player.getName(),
+        		player.getUniqueId(),
+        		player.getAddress().getHostString(),
+        		now,
+        		l.getWorld().getName(),
+        		l.getBlockX(),
+        		l.getBlockY(),
+        		l.getBlockZ(),
                 (result) -> {
                     performAutorank(player, result.getLoginTime());
-                }, (ex) -> {
+                },
+                (ex) -> {
                     getLogger().log(Level.WARNING, "Error during login", ex);
                 });
     }
@@ -279,10 +287,20 @@ public class Main extends JavaPlugin implements Listener {
         long now = System.currentTimeMillis();
         Player player = e.getPlayer();
         Location l = player.getLocation();
-        getDB().playerLogout(getServer().getServerName(), player.getName(), player.getUniqueId(), player.getAddress().getHostString(), now, l.getWorld().getName(), l.getBlockX(), l.getBlockY(), l.getBlockZ(),
+        getDB().playerLogout(
+        		getServer().getServerName(),
+        		player.getName(),
+        		player.getUniqueId(),
+        		player.getAddress().getHostString(),
+        		now,
+        		l.getWorld().getName(),
+        		l.getBlockX(),
+        		l.getBlockY(),
+        		l.getBlockZ(),
                 (result) -> {
                     performAutorank(e.getPlayer(),result.getLoginTime());
-                }, (ex) -> {
+                },
+                (ex) -> {
                     getLogger().log(Level.WARNING, "Error during logout", ex);
                 });
     }
