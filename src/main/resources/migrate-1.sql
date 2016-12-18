@@ -27,6 +27,6 @@ CREATE TABLE last_seen (
 );
 
 INSERT INTO last_seen (uuid, server, type, time, ip) 
-SELECT t1.uuid, t1.server, tl.type, t1.time, t1.ip FROM login_events t1, (select uuid, server, max(time) as time from login_events group by uuid, server) as t2 where t1.uuid = t2.uuid and t1.time = t2.time;
+SELECT t1.uuid, t1.server, t1.type, t1.time, t1.ip FROM login_events t1, (select uuid, server, max(time) as time from login_events group by uuid, server) as t2 where t1.uuid = t2.uuid and t1.time = t2.time;
 
 UPDATE version SET id = 2;
