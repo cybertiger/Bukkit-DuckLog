@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import net.milkbowl.vault.permission.Permission;
 import org.bukkit.Location;
@@ -272,7 +273,7 @@ public class Main extends JavaPlugin implements Listener {
         long now = System.currentTimeMillis();
         Player player = e.getPlayer();
         Location l = player.getLocation();
-        getDB().playerLogout(getServer().getServerName(), player.getName(), player.getUniqueId(), player.getAddress().getHostString(), now, l.getWorld().getName(), l.getBlockX(), l.getBlockY(), l.getBlockZ(),
+        getDB().playerLogout(getRealConfig().getAsyncPromote(), getServer().getServerName(), player.getName(), player.getUniqueId(), player.getAddress().getHostString(), now, l.getWorld().getName(), l.getBlockX(), l.getBlockY(), l.getBlockZ(),
                 (result) -> {
                     performAutorank(e.getPlayer(),result.getLoginTime());
                 }, (ex) -> {
@@ -320,28 +321,95 @@ public class Main extends JavaPlugin implements Listener {
         return Collections.emptyMap();
     }
 
+    private static class PermissionTimings {
+        private int inGroupCount = 0;
+        private long inGroupTotalTime = 0L;
+        private int removeGroupCount = 0;
+        private long removeGroupTotalTime = 0L;
+        private int addGroupCount = 0;
+        private long addGroupTotalTime = 0L;
+
+        public void addInGroupCall(long time) {
+            inGroupCount++;
+            inGroupTotalTime += time;
+        }
+
+        public void addRemoveGroupCall(long time) {
+            removeGroupCount++;
+            removeGroupTotalTime += time;
+        }
+
+        public void addAddGroupCall(long time) {
+            addGroupCount++;
+            addGroupTotalTime += time;
+        }
+
+        public long getTotalNanos() {
+            return inGroupTotalTime + removeGroupTotalTime + addGroupTotalTime;
+        }
+
+        @Override
+        public String toString() {
+            return String.format(
+                    "%d calls to playerInGroup: %fs; "
+                    + "%d calls to removeGroup: %fs; "
+                    + "%d calls to addGroup: %fs",
+                    inGroupCount, TimeUnit.NANOSECONDS.toMicros(inGroupTotalTime) / 1000D,
+                    removeGroupCount, TimeUnit.NANOSECONDS.toMicros(removeGroupTotalTime) / 1000D,
+                    addGroupCount, TimeUnit.NANOSECONDS.toMicros(addGroupTotalTime) / 1000D);
+        }
+    }
+
     public Map<String, AutorankResult> performAutorank(OfflinePlayer player, Map<String, Long> loginTime) {
+        PermissionTimings timings = new PermissionTimings();
+        boolean async = getRealConfig().getAsyncPromote();
         Map<String, AutorankResult> result = new HashMap<>();
         long totalTime = loginTime.values().stream().reduce(0L, (a, b) -> a + b);
         for (Map.Entry<String,AutoPromote> e : config.getAutopromote().entrySet()) {
             AutoPromote ap = e.getValue();
-            boolean hasAll = ap.getHasGroup().stream().map((group) -> permissionService.playerInGroup(null, player, group)).reduce(true, (a,b) -> a && b);
-            boolean missingAll = ap.getMissingGroup().stream().map((group) -> !permissionService.playerInGroup(null, player, group)).reduce(true, (a,b) -> a && b);
+            boolean hasAll = true;
+            for (String group : ap.getHasGroup()) {
+                long startTime = System.nanoTime();
+                hasAll &= permissionService.playerInGroup(null, player, group);
+                long endTime = System.nanoTime();
+                timings.addInGroupCall(endTime - startTime);
+            }
+            boolean missingAll = true;
+            for (String group : ap.getMissingGroup()) {
+                long startTime = System.nanoTime();
+                missingAll &= permissionService.playerInGroup(null, player, group);
+                long endTime = System.nanoTime();
+                timings.addInGroupCall(endTime - startTime);
+            }
             if (hasAll && missingAll) {
                 if (totalTime >= ap.getAfter()*1000) {
                     getLogger().log(Level.INFO, "Groups to remove: {0}", ap.getRemoveGroup());
                     getLogger().log(Level.INFO, "Groups to add: {0}", ap.getAddGroup());
                     for (String group : ap.getRemoveGroup()) {
+                        long startTime = System.nanoTime();
                         permissionService.playerRemoveGroup(null, player, group);
+                        long endTime = System.nanoTime();
+                        timings.addRemoveGroupCall(endTime - startTime);
                     }
                     for (String group : ap.getAddGroup()) {
+                        long startTime = System.nanoTime();
                         permissionService.playerAddGroup(null, player, group); 
+                        long endTime = System.nanoTime();
+                        timings.addAddGroupCall(endTime - startTime);
                     }
                     result.put(e.getKey(), new AutorankResult());
                 } else {
                     result.put(e.getKey(), new AutorankResult(ap.getAfter() * 1000 - totalTime));
                 }
             }
+        }
+        if (!async && TimeUnit.NANOSECONDS.toSeconds(timings.getTotalNanos()) > 1) {
+            getLogger().warning("\n"
+                    + "---------------------------------------------------------------------\n"
+                    + "YOUR PERMISSION PLUGIN IS DOG SHIT SLOW, FIX IT, OR ENABLE\n"
+                    + "asyncPromote: true IN config.yml AND BREAK YOUR SERVER INSTEAD\n"
+                    + timings
+                    + "---------------------------------------------------------------------\n");
         }
         return result;
     }

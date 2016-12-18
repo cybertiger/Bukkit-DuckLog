@@ -7,14 +7,14 @@ package org.cyberiantiger.minecraft.log.cmd;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.logging.Level;
 import java.util.regex.Pattern;
-import org.bukkit.OfflinePlayer;
+import java.util.stream.Collectors;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.cyberiantiger.minecraft.log.LoginEvent;
+import org.cyberiantiger.minecraft.log.LastSeen;
 import org.cyberiantiger.minecraft.log.Main;
+import org.cyberiantiger.minecraft.log.MojangAccount;
 import org.joda.time.Period;
 import org.joda.time.format.PeriodFormat;
 
@@ -24,6 +24,7 @@ import org.joda.time.format.PeriodFormat;
  */
 public class SeenCommand extends AbstractCommand {
     private static final Pattern VALID_USERNAME = Pattern.compile("[a-zA-Z0-9_]{2,16}");
+    private Map<CommandSender, Map<MojangAccount, Map<String, LastSeen>>> searchResults;
 
 
     public SeenCommand(Main main) {
@@ -49,31 +50,65 @@ public class SeenCommand extends AbstractCommand {
                 main.getLogger().log(Level.WARNING, "Error occurred processing seen <name>", ex);
             });
         } else {
-            if (!sender.hasPermission("seen.where.ip")) {
-                throw new PermissionException("seen.where.ip");
+            try { 
+                // Try previous search results.
+                int resultNumber = Integer.parseInt(args[0]);
+                Map<MojangAccount, Map<String, LastSeen>> lastResults = searchResults.get(sender);
+                if (lastResults == null) {
+                    sender.sendMessage(main.getMessage("seen.error.no_results"));
+                    return;
+                }
+                if (resultNumber < 1 || resultNumber > searchResults.size()) {
+                    sender.sendMessage(main.getMessage("seen.error.invalid_result_number", lastResults.size()));
+                    return;
+                }
+
+            } catch (NumberFormatException e) {
+                // Assume IP based query.
+                if (!sender.hasPermission("seen.where.ip")) {
+                    throw new PermissionException("seen.where.ip");
+                }
+                main.getDB().seenIp(target, (result) -> {
+                    processResult(sender, result);
+                }, (ex) -> {
+                    sender.sendMessage(main.getMessage("error"));
+                    main.getLogger().log(Level.WARNING, "Error occurred processing seen <ip>", ex);
+                });
             }
-            // Assume IP based query.
-            main.getDB().seenIp(target, (result) -> {
-                processResult(sender, result);
-            }, (ex) -> {
-                sender.sendMessage(main.getMessage("error"));
-                main.getLogger().log(Level.WARNING, "Error occurred processing seen <ip>", ex);
-            });
         }
     }
 
 
-    private void processResult(CommandSender sender, Map<UUID, Map<String, LoginEvent>> result) {
+    private void processResult(CommandSender sender, Map<MojangAccount, Map<String, LastSeen>> result) {
         if (result.isEmpty()) {
-            sender.sendMessage(main.getMessage("seen.not_found"));
+            sender.sendMessage(main.getMessage("seen.error.not_found"));
+        } else if (result.size() == 1) {
+            Map.Entry<MojangAccount, Map<String, LastSeen>> e = result.entrySet().iterator().next();
+            MojangAccount account = e.getKey();
+            Map<String, LastSeen> data = e.getValue();
+            // TODO Print out a bunch of crap, verbose flag ?
         } else {
+            searchResults.put(sender, result);
+            sender.sendMessage(main.getMessage("seen.search_header", result.size()));
+            int counter = 1;
+            for (MojangAccount account : result.keySet()) {
+                sender.sendMessage(main.getMessage("seen.search_result", 
+                        counter,
+                        account.getId(),
+                        account.getLastSeen().keySet().stream().collect(Collectors.joining(", "))
+                ));
+                counter++;
+            }
+            sender.sendMessage(main.getMessage("seen.search_footer", result.size()));
+        }
+        /*
             sender.sendMessage(main.getMessage("seen.header", result.size()));
             result.entrySet().stream().forEach((e) -> {
                 long now = System.currentTimeMillis();
                 boolean f1 = true;
                 boolean f2 = true;
                 StringBuilder aliases = new StringBuilder();
-                for (Map.Entry<String, LoginEvent> ee : e.getValue().entrySet()) {
+                for (Map.Entry<String, LastSeen> ee : e.getValue().entrySet()) {
                     if (f1) {
                         f1 = false;
                         Period period = trimPeriod(now - ee.getValue().getTime());
@@ -115,5 +150,6 @@ public class SeenCommand extends AbstractCommand {
                 }
             });
         }
+                */
     }
 }
