@@ -53,6 +53,7 @@
               <shadedPattern>org.cyberiantiger.minecraft.ducklog.time</shadedPattern>
             </relocation>
           </relocations>
+          <minimizeJar>true</minimizeJar>
         </configuration>
       </plugin>
     </plugins>

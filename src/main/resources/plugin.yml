@@ -36,7 +36,11 @@ commands:
         timetop:
                 usage: /timetop [server]
                 description: Show the top 10 players by login time, optionally per server.
-                default: op
+                permission: ducklog.timetop
+        friend:
+                usage: /friend <playername>
+                description: Displays when the named player was last online.
+                permission: ducklog.friend
 permissions:
         ducklog.*:
                 description: All ducklog permissions.
@@ -47,6 +51,7 @@ permissions:
                         - ducklog.check
                         - ducklog.reload
                         - ducklog.timetop
+                        - ducklog.friend
         ducklog.seen:
                 description: Allow usage of the /seen command.
                 default: op
@@ -67,3 +72,7 @@ permissions:
                 default: op
         ducklog.timetop:
                 description: Allow usage of the /timetop command.
+                default: op
+        ducklog.friend:
+                description: Allow usage of the /friend command.
+                default: true
