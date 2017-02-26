@@ -13,6 +13,7 @@ import java.util.Map;
  * @author antony
  */
 public class Config {
+    private boolean asyncPromote;
     private String dbUrl;
     private String dbUser;
     private String dbPassword;
@@ -28,6 +29,10 @@ public class Config {
 
     public String getDbPassword() {
         return dbPassword;
+    }
+
+    public boolean getAsyncPromote() {
+        return asyncPromote;
     }
 
     public Map<String, AutoPromote> getAutopromote() {

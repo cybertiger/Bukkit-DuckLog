@@ -42,7 +42,7 @@ public class Database {
     private static final String QUERY_LOGIN_TIME_SQL = "SELECT server, time FROM login_time WHERE uuid = ? ORDER BY server";
     private static final String QUERY_CURRENT_SESSION = "SELECT server, start FROM login_sessions WHERE uuid = ? ORDER BY server";
     private static final String UPDATE_SESSION_SQL = "INSERT INTO login_sessions (server, uuid, start) values (?, ?, ?) ON DUPLICATE KEY UPDATE start = ?";
-    private static final String UPDATE_LAST_SEEN_SQL = "INSERT INTO last_seen (uuid, server, time, world, x, y, z) values (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE time = ?, world = ?, x = ?, y = ?, z = ?";
+    private static final String UPDATE_LAST_SEEN_SQL = "INSERT INTO last_seen (uuid, server, type, time, world, x, y, z) values (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE type = ?, time = ?, world = ?, x = ?, y = ?, z = ?";
 
     public static class PlayerLoginResult {
         private final Map<String, Long> loginTime;
@@ -184,16 +184,18 @@ public class Database {
             updateSession.setLong(4, time);
             lastSeen.setString(1, uuid.toString());
             lastSeen.setString(2, serverName);
-            lastSeen.setLong(3, time);
-            lastSeen.setString(4, world);
-            lastSeen.setInt(5, x);
-            lastSeen.setInt(6, y);
-            lastSeen.setInt(7, z);
-            lastSeen.setLong(8, time);
-            lastSeen.setString(9, world);
-            lastSeen.setInt(10, x);
-            lastSeen.setInt(11, y);
-            lastSeen.setInt(12, z);
+            lastSeen.setString(3, "LOGIN");
+            lastSeen.setLong(4, time);
+            lastSeen.setString(5, world);
+            lastSeen.setInt(6, x);
+            lastSeen.setInt(7, y);
+            lastSeen.setInt(8, z);
+            lastSeen.setString(9, "LOGIN");
+            lastSeen.setLong(10, time);
+            lastSeen.setString(11, world);
+            lastSeen.setInt(12, x);
+            lastSeen.setInt(13, y);
+            lastSeen.setInt(14, z);
             login.executeUpdate();
             updateNames.executeUpdate();
             updateSession.executeUpdate();
@@ -251,16 +253,18 @@ public class Database {
             updateNames.setLong(5, time);
             lastSeen.setString(1, uuid.toString());
             lastSeen.setString(2, serverName);
-            lastSeen.setLong(3, time);
-            lastSeen.setString(4, world);
-            lastSeen.setInt(5, x);
-            lastSeen.setInt(6, y);
-            lastSeen.setInt(7, z);
-            lastSeen.setLong(8, time);
-            lastSeen.setString(9, world);
-            lastSeen.setInt(10, x);
-            lastSeen.setInt(11, y);
-            lastSeen.setInt(12, z);
+            lastSeen.setString(3, "LOGOUT");
+            lastSeen.setLong(4, time);
+            lastSeen.setString(5, world);
+            lastSeen.setInt(6, x);
+            lastSeen.setInt(7, y);
+            lastSeen.setInt(8, z);
+            lastSeen.setString(9, "LOGOUT");
+            lastSeen.setLong(10, time);
+            lastSeen.setString(11, world);
+            lastSeen.setInt(12, x);
+            lastSeen.setInt(13, y);
+            lastSeen.setInt(14, z);
             logout.executeUpdate();
             updateNames.executeUpdate();
             lastSeen.executeUpdate();
@@ -345,27 +349,56 @@ public class Database {
         }
     }
 
-    private synchronized Map<String, LoginEvent> getNamesByUUID(UUID uuid) throws SQLException {
+    private synchronized Map<String, LastSeen> getLastSeen(UUID uuid) throws SQLException {
         Connection conn = getConnection();
         try (
-                PreparedStatement ps = conn.prepareStatement("SELECT p.name, l.server, l.time, l.ip, l.type FROM playernames p, login_events l WHERE p.uuid = l.uuid and p.last_seen = l.time and p.uuid = ? ORDER BY p.last_seen DESC");
+                PreparedStatement ps = conn.prepareStatement("SELECT l.server, l.type, l.time, l.ip, l.world, l.x, l.y, l.z FROM last_seen l WHERE l.uuid = ? ORDER BY l.time DESC")
                 )
         {
             ps.setString(1, uuid.toString());
-            try (ResultSet rs = ps.executeQuery()) {
-                Map<String,LoginEvent> result = new LinkedHashMap<>();
+            try (
+                    ResultSet rs = ps.executeQuery()
+                    )
+            {
+                Map<String, LastSeen> result = new LinkedHashMap<>();
                 while (rs.next()) {
-                    result.put(rs.getString(1), new LoginEvent(LoginEvent.Type.valueOf(rs.getString(5).toUpperCase()), rs.getString(2), rs.getString(4), rs.getLong(3)));
+                    String server = rs.getString(1);
+                    Action type = Action.valueOf(rs.getString(2).toUpperCase());
+                    Long time = rs.getLong(3);
+                    String ip = rs.getString(4);
+                    String world = rs.getString(5);
+                    int x = rs.getInt(6);
+                    int y = rs.getInt(7);
+                    int z = rs.getInt(8);
+                    result.put(server, new LastSeen(type, server, ip, time, world, x, y, z));
                 }
                 return result;
             }
         }
     }
 
+    private synchronized MojangAccount getMojangAccount(UUID uuid) throws SQLException {
+        Connection conn = getConnection();
+        try (
+                PreparedStatement ps = conn.prepareStatement("SELECT p.name, p.last_seen FROM playernames p WHERE p.uuid = ? ORDER BY p.last_seen DESC")
+                )
+        {
+            ps.setString(1, uuid.toString());
+            Map<String,Long> alts = new LinkedHashMap<>();
+            try (ResultSet rs = ps.executeQuery()) {
+                Map<String,LastSeen> result = new LinkedHashMap<>();
+                while (rs.next()) {
+                    alts.put(rs.getString(1), rs.getLong(2));
+                }
+            }
+            return new MojangAccount(uuid, alts);
+        }
+    }
+
     private synchronized List<LoginEvent> getLoginEventsByUUID(UUID uuid, int offset, int limit) throws SQLException {
         Connection conn = getConnection();
         try (
-                PreparedStatement ps = conn.prepareStatement("SELECT server, time, ip, type FROM login_events WHERE uuid = ? ORDER BY time DESC LIMIT ? OFFSET ?");
+                PreparedStatement ps = conn.prepareStatement("SELECT type, server, ip, time FROM login_events WHERE uuid = ? ORDER BY time DESC LIMIT ? OFFSET ?");
                 )
         {
             ps.setString(1, uuid.toString());
@@ -374,31 +407,29 @@ public class Database {
             try (ResultSet rs = ps.executeQuery()) {
                 List<LoginEvent> result = new ArrayList<>();
                 while (rs.next()) {
-                    result.add(new LoginEvent(LoginEvent.Type.valueOf(rs.getString(4).toUpperCase()), rs.getString(1), rs.getString(3), rs.getLong(2)));
+                    result.add(new LoginEvent(Action.valueOf(rs.getString(1).toUpperCase()), rs.getString(2), rs.getString(3), rs.getLong(4)));
                 }
                 return result;
             }
         }
     }
 
-    private synchronized Map<UUID, Map<String, LoginEvent>> seenNameSync(String name) throws SQLException {
-        Connection conn = getConnection();
-        List<UUID> accounts = getUUIDsByName(name);
-        Map<UUID, Map<String, LoginEvent>> alts = new HashMap<>();
+    private synchronized Map<MojangAccount, Map<String, LastSeen>> seenSync(List<UUID> accounts) throws SQLException {
+        Map<MojangAccount, Map<String, LastSeen>> result = new HashMap<>(accounts.size());
         for (UUID uuid : accounts) {
-            alts.put(uuid, getNamesByUUID(uuid));
+            MojangAccount account = getMojangAccount(uuid);
+            Map<String,LastSeen> lastSeen = getLastSeen(uuid);
+            result.put(account, lastSeen);
         }
-        return alts;
+        return result;
     }
 
-    private synchronized Map<UUID, Map<String, LoginEvent>> seenIpSync(String ip) throws SQLException {
-        Connection conn = getConnection();
-        List<UUID> accounts = getUUIDsByIP(ip);
-        Map<UUID, Map<String, LoginEvent>> alts = new HashMap<>();
-        for (UUID uuid : accounts) {
-            alts.put(uuid, getNamesByUUID(uuid));
-        }
-        return alts;
+    private synchronized Map<MojangAccount, Map<String, LastSeen>> seenNameSync(String name) throws SQLException {
+        return seenSync(getUUIDsByName(name));
+    }
+
+    private synchronized Map<MojangAccount, Map<String, LastSeen>> seenIpSync(String ip) throws SQLException {
+        return seenSync(getUUIDsByIP(ip));
     }
 
     private synchronized Map<UUID, List<LoginEvent>> auditSync(String name, int offset, int limit) throws SQLException {
@@ -473,10 +504,12 @@ public class Database {
         }
     }
 
-    public void playerLogout(String serverName, String name, UUID uuid, String ip, long time, String world, int x, int y, int z, Consumer<PlayerLogoutResult> result, Consumer<Exception> ex) {
+    public void playerLogout(boolean async, String serverName, String name, UUID uuid, String ip, long time, String world, int x, int y, int z, Consumer<PlayerLogoutResult> result, Consumer<Exception> ex) {
         if (Bukkit.isPrimaryThread()) {
             main.getServer().getScheduler().runTaskAsynchronously(main, () -> {
-                playerLogout(serverName, name, uuid, ip, time, world, x, y, z, new CallSyncConsumer<>(main, result), new CallSyncConsumer<>(main, ex));
+                playerLogout(async, serverName, name, uuid, ip, time, world, x, y, z,
+                        async ? result : new CallSyncConsumer<>(main, result),
+                        async ? ex : new CallSyncConsumer<>(main, ex));
             });
             return;
         }
@@ -487,7 +520,7 @@ public class Database {
         }
     }
 
-    public void seenName(String name, Consumer<Map<UUID, Map<String, LoginEvent>>> result, Consumer<Exception> ex) {
+    public void seenName(String name, Consumer<Map<MojangAccount, Map<String, LastSeen>>> result, Consumer<Exception> ex) {
         if (Bukkit.isPrimaryThread()) {
             main.getServer().getScheduler().runTaskAsynchronously(main, () -> {
                 seenName(name, new CallSyncConsumer<>(main, result), new CallSyncConsumer<>(main, ex));
@@ -501,7 +534,7 @@ public class Database {
         }
     }
 
-    public void seenIp(String ip, Consumer<Map<UUID, Map<String, LoginEvent>>> result, Consumer<Exception> ex) {
+    public void seenIp(String ip, Consumer<Map<MojangAccount, Map<String, LastSeen>>> result, Consumer<Exception> ex) {
         if (Bukkit.isPrimaryThread()) {
             main.getServer().getScheduler().runTaskAsynchronously(main, () -> {
                 seenIp(ip, new CallSyncConsumer<>(main, result), new CallSyncConsumer<>(main, ex));
