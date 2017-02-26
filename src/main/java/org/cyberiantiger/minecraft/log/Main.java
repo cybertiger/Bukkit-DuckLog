@@ -1,7 +1,5 @@
 package org.cyberiantiger.minecraft.log;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.ByteStreams;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -25,7 +23,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
-import net.milkbowl.vault.permission.Permission;
+
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -42,6 +40,7 @@ import org.cyberiantiger.minecraft.log.cmd.AuditCommand;
 import org.cyberiantiger.minecraft.log.cmd.CheckCommand;
 import org.cyberiantiger.minecraft.log.cmd.CommandException;
 import org.cyberiantiger.minecraft.log.cmd.DuckLogCommand;
+import org.cyberiantiger.minecraft.log.cmd.FriendCommand;
 import org.cyberiantiger.minecraft.log.cmd.InvalidSenderException;
 import org.cyberiantiger.minecraft.log.cmd.PermissionException;
 import org.cyberiantiger.minecraft.log.cmd.SeenCommand;
@@ -53,6 +52,11 @@ import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.CustomClassLoaderConstructor;
 import org.yaml.snakeyaml.error.YAMLException;
 import org.yaml.snakeyaml.introspector.BeanAccess;
+
+import com.google.common.base.Charsets;
+import com.google.common.io.ByteStreams;
+
+import net.milkbowl.vault.permission.Permission;
 
 public class Main extends JavaPlugin implements Listener {
     private static final String CONFIG = "config.yml";
@@ -150,7 +154,7 @@ public class Main extends JavaPlugin implements Listener {
                 messages.clear();
                 messages.load(openResource(MESSAGES));
             } catch (IOException ex1) {
-                getLogger().log(Level.SEVERE, "Could not load default locale.properties", ex);
+                getLogger().log(Level.SEVERE, "Could not load default locale.properties", ex1);
             }
         }
     }
@@ -229,6 +233,7 @@ public class Main extends JavaPlugin implements Listener {
         commands.put("check", new CheckCommand(this));
         commands.put("ducklog", new DuckLogCommand(this));
         commands.put("timetop", new TimeTopCommand(this));
+        commands.put("friend", new FriendCommand(this));
     }
 
     @Override
@@ -260,10 +265,20 @@ public class Main extends JavaPlugin implements Listener {
         long now = System.currentTimeMillis();
         Player player = e.getPlayer();
         Location l = player.getLocation();
-        getDB().playerLogin(getServer().getServerName(), player.getName(), player.getUniqueId(), player.getAddress().getHostString(), now, l.getWorld().getName(), l.getBlockX(), l.getBlockY(), l.getBlockZ(),
+        getDB().playerLogin(
+        		getServer().getServerName(),
+        		player.getName(),
+        		player.getUniqueId(),
+        		player.getAddress().getHostString(),
+        		now,
+        		l.getWorld().getName(),
+        		l.getBlockX(),
+        		l.getBlockY(),
+        		l.getBlockZ(),
                 (result) -> {
                     performAutorank(player, result.getLoginTime());
-                }, (ex) -> {
+                },
+                (ex) -> {
                     getLogger().log(Level.WARNING, "Error during login", ex);
                 });
     }
@@ -273,10 +288,13 @@ public class Main extends JavaPlugin implements Listener {
         long now = System.currentTimeMillis();
         Player player = e.getPlayer();
         Location l = player.getLocation();
+
         getDB().playerLogout(getRealConfig().getAsyncPromote(), getServer().getServerName(), player.getName(), player.getUniqueId(), player.getAddress().getHostString(), now, l.getWorld().getName(), l.getBlockX(), l.getBlockY(), l.getBlockZ(),
+
                 (result) -> {
                     performAutorank(e.getPlayer(),result.getLoginTime());
-                }, (ex) -> {
+                },
+                (ex) -> {
                     getLogger().log(Level.WARNING, "Error during logout", ex);
                 });
     }

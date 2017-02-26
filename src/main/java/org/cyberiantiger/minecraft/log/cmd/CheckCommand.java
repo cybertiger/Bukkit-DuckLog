@@ -9,10 +9,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
+
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.cyberiantiger.minecraft.log.Main;
-import org.joda.time.format.PeriodFormat;
 
 /**
  *
@@ -65,10 +65,10 @@ public class CheckCommand extends AbstractCommand {
             sender.sendMessage(main.getMessage("check.header"));
             long total = 0L;
             for (Map.Entry<String,Long> ee : e.getValue().entrySet()) {
-                sender.sendMessage(main.getMessage("check.row", ee.getKey(), PeriodFormat.getDefault().print(trimPeriod((long)ee.getValue()))));
+                sender.sendMessage(main.getMessage("check.row", ee.getKey(), getFormattedTime(ee.getValue())));
                 total += ee.getValue();
             }
-            sender.sendMessage(main.getMessage("check.summary", PeriodFormat.getDefault().print(trimPeriod(total))));
+            sender.sendMessage(main.getMessage("check.summary", getFormattedTime(total)));
             Map<String, Main.AutorankResult> performAutorank = main.performAutorank(e.getKey(), e.getValue());
             for (Map.Entry<String, Main.AutorankResult> ee : performAutorank.entrySet()) {
                 String promotionName = ee.getKey();
@@ -82,9 +82,9 @@ public class CheckCommand extends AbstractCommand {
                         break;
                     case WAIT:
                         if (self) {
-                            sender.sendMessage(main.getMessage("check.wait.self", promotionName, PeriodFormat.getDefault().print(trimPeriod(ee.getValue().getWait()))));
+                            sender.sendMessage(main.getMessage("check.wait.self", promotionName, getFormattedTime(ee.getValue().getWait())));
                         } else {
-                            sender.sendMessage(main.getMessage("check.wait.other", name, promotionName, PeriodFormat.getDefault().print(trimPeriod(ee.getValue().getWait()))));
+                            sender.sendMessage(main.getMessage("check.wait.other", name, promotionName, getFormattedTime(ee.getValue().getWait()) ));
                         }
                         break;
                 }

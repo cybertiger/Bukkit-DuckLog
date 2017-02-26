@@ -36,6 +36,10 @@ public class AutoPromote {
         return addGroup == null ? Collections.emptyList() : addGroup;
     }
 
+    public String getMessage() {
+    	return message;
+    }
+    
     public long getAfter() {
         return after;
     }

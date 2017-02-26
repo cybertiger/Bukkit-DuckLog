@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.regex.Pattern;
+
 import java.util.stream.Collectors;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -111,7 +112,6 @@ public class SeenCommand extends AbstractCommand {
                 for (Map.Entry<String, LastSeen> ee : e.getValue().entrySet()) {
                     if (f1) {
                         f1 = false;
-                        Period period = trimPeriod(now - ee.getValue().getTime());
                         sender.sendMessage(
                                 main.getMessage("seen.player",
                                         ee.getKey(), // Name
@@ -132,9 +132,7 @@ public class SeenCommand extends AbstractCommand {
                                     ));
                         }
                         sender.sendMessage(
-                                main.getMessage("seen.time",
-                                        PeriodFormat.getDefault().print(period) // Time
-                                ));
+                                main.getMessage("seen.time", getFormattedTime(now - ee.getValue().getTime())));
                     } else {
                         if (f2) {
                             aliases.append(ee.getKey());
